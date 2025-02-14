@@ -1,0 +1,39 @@
+---
+output: github_document
+---
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.path = "man/figures/README-",
+  out.width = "100%"
+)
+```
+
+# PesticideLoadIndex4Dummies
+
+<!-- badges: start -->
+<!-- badges: end -->
+
+The goal of PesticideLoadIndex4Dummies is to generalize the calculations used in the Danish Pesticide Load Index and make them accessible for anyone to use. Particuarly the folks in the ADOPT-IPM consortium. 
+
+## Installation
+
+You can install the development version of PesticideLoadIndex4Dummies from [GitHub](https://github.com/) with:
+
+``` r
+# install.packages("pak")
+pak::pak("vanichols/PesticideLoadIndex4Dummies")
+```
+
+## Example
+
+This is a work in progress, nothing to show here yet folks.
+
+```{r example}
+library(PesticideLoadIndex4Dummies)
+## basic example code
+```

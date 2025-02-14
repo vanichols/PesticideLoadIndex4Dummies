@@ -1,10 +1,13 @@
 Package: PesticideLoadIndex4Dummies
-Title: What the Package Does (One Line, Title Case)
+Title: Provides Easy Access to Generalized Calculations of Pesticide Loads
 Version: 0.0.0.9000
 Authors@R: 
-    person("First", "Last", , "first.last@example.com", role = c("aut", "cre"),
+    person("Virginia", "Nichols", , "virginia.nichols@gmail.com", role = c("aut", "cre"),
            comment = c(ORCID = "YOUR-ORCID-ID"))
-Description: What the package does (one paragraph).
+Description: Using methodology similar to the Danish Pesticide Load Index, 
+  this package allows a user to enter an active ingredient and the amount applied per unit area,
+  and will return an estimate of the environmental fate and environmental toxicity loads, on 
+  a scale from 0-1 with 1 being the most potentially harmful impacts.
 License: `use_mit_license()`, `use_gpl3_license()` or friends to pick a
     license
 Encoding: UTF-8
@@ -12,3 +15,8 @@ Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2
 URL: https://github.com/vanichols/PesticideLoadIndex4Dummies
 BugReports: https://github.com/vanichols/PesticideLoadIndex4Dummies/issues
+Imports: 
+    magrittr
+Depends: 
+    R (>= 2.10)
+LazyData: true
