@@ -31,9 +31,10 @@ pak::pak("vanichols/PesticideLoadIndex4Dummies")
 
 ## Example
 
-This is a work in progress, nothing to show here yet folks.
+Right now the GetLoadIndex just scales the value to be between 0 and 1, where 0 represents 
+the most benign substance in the database, and 1 represents the most toxic. The scale is logarithmic.
 
 ```{r example}
 library(PesticideLoadIndex4Dummies)
-## basic example code
+#GetLoadIndex(f_dat = pli_examdat)
 ```
