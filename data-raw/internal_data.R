@@ -8,26 +8,27 @@ rm(list = ls())
 
 
 # A. example input data ---------------------------------------------------
+#--why is this internal data? It is pli_exdat 18 feb 2025
 
-a0 <-
-  readxl::read_excel("data-raw/elicitations/ANT - compost lettuce.xlsx", skip = 5) %>%
-  tidyr::fill(title, scenario) %>%
-  dplyr::mutate(ai_conc = as.numeric(ai_conc),
-         prod_amt = as.numeric(prod_amt))
-
-
-# a1. fix units -----------------------------------------------------------
-
-a1 <-
-  a0 %>%
-  dplyr::mutate(ai_con_g_g = ai_conc/100,
-         prod_amt_g_ha = prod_amt * 1000) %>%
-  dplyr::mutate(ai_con_g_g = ifelse(is.na(ai_con_g_g), 0, ai_con_g_g),
-         prod_amt_g_ha = ifelse(is.na(prod_amt_g_ha), 0, prod_amt_g_ha),
-         ai_name = ifelse(is.na(ai_name), "none", ai_name)) %>%
-  dplyr::select(title, scenario, ai_name, ai_con_g_g, prod_amt_g_ha)
-
-internal_antex <- a1
+# a0 <-
+#   readxl::read_excel("data-raw/elicitations/ANT - compost lettuce.xlsx", skip = 5) %>%
+#   tidyr::fill(title, scenario) %>%
+#   dplyr::mutate(ai_conc = as.numeric(ai_conc),
+#          prod_amt = as.numeric(prod_amt))
+#
+#
+# # a1. fix units -----------------------------------------------------------
+#
+# a1 <-
+#   a0 %>%
+#   dplyr::mutate(ai_con_g_g = ai_conc/100,
+#          prod_amt_g_ha = prod_amt * 1000) %>%
+#   dplyr::mutate(ai_con_g_g = ifelse(is.na(ai_con_g_g), 0, ai_con_g_g),
+#          prod_amt_g_ha = ifelse(is.na(prod_amt_g_ha), 0, prod_amt_g_ha),
+#          ai_name = ifelse(is.na(ai_name), "none", ai_name)) %>%
+#   dplyr::select(title, scenario, ai_name, ai_con_g_g, prod_amt_g_ha)
+#
+# internal_antex <- a1
 
 
 # D. PPDB internal data ---------------------------------------------------
@@ -103,11 +104,8 @@ d4 <-
 d5 <-
   d4 %>%
   dplyr::group_by(name) %>%
-  dplyr::arrange(value2, .by_group = TRUE) %>%
+  dplyr::arrange(value2, .by_group = TRUE)
 
-  #--see what the lowest value that is NOT zero is, I think it is fine
-  #--this is so we can take the logarithm to fit for scaling
-  dplyr::filter(!value2 == 0)
 
 d5.tmp <-
   d5 %>%
@@ -127,41 +125,34 @@ d5.tmp2 <-
   d5.tmp %>%
   dplyr::filter(!is.na(min))
 
+#--only two parameters have a value of 0, and we don't actually use these in the danish pli, so don't worry about it
+d5.tmp3 <-
+  d5.tmp %>%
+  dplyr::filter(min==0)
 
+#--how do these minimum values compare to the references values from rainford?
+#--for the ecotox ones
+ref_eco <- readxl::read_excel("data-raw/byhand_ecotox-ref-values.xlsx", skip = 5)
 
-# d6. take the second lowest value if it is 0 (98 substances impacted-----------------------------------------
+#--NOTE: the reference values are higher than the minimum values, so I need to fix this in the 'fitting'
+ref_eco %>%
+  left_join(d5.tmp)
 
-#--find lowest value that is not 0
-d6.tmp <-
-  d5 %>%
-  dplyr::filter(value2 != 0) %>%
-  dplyr::group_by(name) %>%
-  dplyr::summarise(value.tmp = min(value2))
+# d6. do nothing, used to overwrite 0s-----------------------------------------
 
-d6 <-
-  d5 %>%
-  dplyr::left_join(d6.tmp) %>%
-  dplyr::mutate(value4 = case_when(
-    value2 == 0 ~ value.tmp,
-    TRUE ~ value2
-  ))
-
-d6.tmp2 <-
-  d6 %>%
-  dplyr::filter(value2 != value4)
-
+d6 <- d5
 
 # d7. order within names ---------------------------------------------------
 
 d7 <-
   d6 %>%
   dplyr::group_by(name) %>%
-  dplyr::arrange(value4, .by_group = TRUE) %>%
+  dplyr::arrange(value2, .by_group = TRUE) %>%
   dplyr::mutate(n = 1:n())
 
 
 d7 %>%
-  ggplot(aes(n, value4)) +
+  ggplot(aes(n, value2)) +
   geom_point() +
   facet_wrap(~name, scales = "free") +
   scale_y_log10()
@@ -183,7 +174,7 @@ d8 %>%
 
 d7 %>%
   filter(grepl("soil", name)) %>%
-  ggplot(aes(n, value4)) +
+  ggplot(aes(n, value2)) +
   geom_point(aes(color = name, shape = name), size = 3)
 
 #--use the field days I guess, although things are sprayed in greenhouses
@@ -211,7 +202,7 @@ d8a <-
     name == "temperate_freshwater_fish_chronic_21d_noec_mg_l" ~ "env_tox_load", #--fish
     name == "temperate_freshwater_aquatic_invertebrates_chronic_mg_l" ~ "env_tox_load", #--daphnia
     name == "earthworms_chronic_noec_reproduction_mg_kg" ~ "env_tox_load", #--worms
-    TRUE ~ "DKDC"
+    TRUE ~ "DKDC" #--don't know don't care
   ))
 
 
@@ -225,11 +216,10 @@ d8 <-
 d9 <-
   d8 %>%
   dplyr::left_join(d7) %>%
-  dplyr::select(-value2, -value.tmp, value.num = value4)
+  dplyr::select(n, pli_cat, name, substance, value.num = value2)
 
 #--it is kind of big, this might not be the best way to do this
 internal_ppdb <- d9
-
 
 # C. make nice labels for indices -----------------------------------------
 
@@ -264,34 +254,110 @@ internal_nicenames <-
 
 # B. fit and save models ------------------------------------------------
 
+#--this needs to change, needs to use reference values
+
 inds <- internal_ppdb %>% pull(name) %>% unique()
 
-internal_mods <- list()
+ref_envload <-
+  readxl::read_excel("data-raw/byhand_envload-ref-values.xlsx", skip = 5) %>%
+  fill(name) %>%
+  mutate(ref_plivalue = as.numeric(ref_plivalue)) %>%
+  filter(name %in% (internal_ppdb %>% pull(name) %>% unique()))
 
-for(i in 1:length(inds)){
+#--the reference values from the UK-PLI don't match this approach. fuck.
+internal_ppdb %>%
+  mutate(liv = n/max(n),
+         name = as.factor(name)) %>%
+  filter(name == inds[1]) %>%
+  ggplot(aes(value.num, liv)) +
+  geom_point() +
+  geom_point(data = ref_envload %>% filter(name == "soil_degradation_dt50_field_days"),
+             aes(x = value, ref_plivalue), color = "red") +
+  scale_x_log10()
 
-  #--soil degradation
-  b0 <-
-    internal_ppdb %>%
-    mutate(liv = n/max(n),
-           name = as.factor(name)) %>%
-    filter(name == inds[i])
+#--use a linear model between points for soil degradation and bioconcentratoin
 
-  my.mod <- nls(liv ~ SSlogis(log(value.num), Asym, mid, scal),
-                      data = b0)
+inds_refs <- intersect(inds, ref_envload %>% pull(name) %>% unique())
 
 
-  internal_mods[[i]] <- my.mod
+# b1. bcf model -----------------------------------------------------------
+#--bioconcentration
+
+b1 <-
+  ref_envload %>%
+  filter(name == inds_refs[1])
+
+internal_mod_bcf <- NULL
+
+for(i in 1:(nrow(b1)-1)){
+
+  tmp.start <- i
+  tmp.stop <- i + 1
+
+  b1.tmp <-
+    b1 %>%
+    slice(tmp.start:tmp.stop)
+
+  my.mod <- lm(ref_plivalue ~ value, data = b1.tmp)
+
+  internal_mod_bcf[[i]] <- my.mod
+  print(i)
+
+}
+
+# b2. soil degrad model -----------------------------------------------------------
+#--soil degradation
+
+b2 <-
+  ref_envload %>%
+  filter(name == inds_refs[2])
+
+internal_mod_soil <- NULL
+
+for(i in 1:(nrow(b2)-1)){
+
+  tmp.start <- i
+  tmp.stop <- i + 1
+
+  b2.tmp <-
+    b2 %>%
+    slice(tmp.start:tmp.stop)
+
+  my.mod <- lm(ref_plivalue ~ value, data = b2.tmp)
+
+  internal_mod_soil[[i]] <- my.mod
+  print(i)
 
 }
 
 
+# linear for all others? --------------------------------------------------
+
+ref_eco <- readxl::read_excel("data-raw/byhand_ecotox-ref-values.xlsx", skip = 5)
+
+inds_refs2 <- intersect(inds, ref_eco %>% pull(name) %>% unique())
+
+b3 <-
+  ref_eco %>%
+  filter(name == inds_refs2[1]) %>%
+  select(-reference_substance_name) %>%
+  bind_rows(
+    internal_ppdb %>%
+      filter(name == inds_refs2[1]) %>%
+      filter(value.num == max(value.num)) %>%
+      select(name, reference_substance_value = value.num) %>%
+      mutate(pli_value = 0)
+  )
+
+b3
+lm(pli_value ~ 1/reference_substance_value, data = b3)
 
 # write it ----------------------------------------------------------------
 
 usethis::use_data(internal_ppdb,
-                  internal_antex,
+                  #internal_antex,
                   internal_nicenames,
-                  internal_mods,
+                  internal_mod_bcf,
+                  internal_mod_soil,
                   internal = TRUE, overwrite = TRUE)
 

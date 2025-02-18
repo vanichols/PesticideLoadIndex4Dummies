@@ -23,3 +23,5 @@ a1 <-
 pli_exdat <- a1
 
 usethis::use_data(pli_exdat, overwrite = TRUE)
+
+pli_exdat %>% readr::write_csv("data-raw/pli_exdat.csv")

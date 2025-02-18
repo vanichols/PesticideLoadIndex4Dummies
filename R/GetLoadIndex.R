@@ -6,6 +6,8 @@
 
 #--using this website as a guide: https://rpubs.com/MarkusLoew/12164
 
+#--oof this won't work. The 'low' reference values for ecotoxicity really matter, I can't just take the smallest one.
+
 GetLoadIndex <- function(f_dat = pli_exdat){
 
   #--get the active ing we need values for

@@ -1,0 +1,4 @@
+title,scenario,ai_name,ai_con_g_g,prod_amt_g_ha
+ANT - compost on lettuce,CCP,cyprodinil,0.375,600
+ANT - compost on lettuce,CCP,fludioxonil,0.25,600
+ANT - compost on lettuce,IPM,none,0,0
