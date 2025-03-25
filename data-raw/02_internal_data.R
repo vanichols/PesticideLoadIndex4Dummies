@@ -50,6 +50,8 @@ draw <-
 draw.names <- names(draw)
 
 #--some we asked for but didn't get? might be a replacement for them
+#--for ex we asked for bioconcentration_factor_bcf_lkg
+#--it is actually bioconcentration_factor_bcf_l_kg
 setdiff(rdat.names, draw.names)
 
 #--a lot we didn't ask for, _qb is an indicator of quality
@@ -130,15 +132,7 @@ d5.tmp3 <-
   d5.tmp %>%
   dplyr::filter(min==0)
 
-#--how do these minimum values compare to the references values from rainford?
-#--for the ecotox ones
-ref_eco <- readxl::read_excel("data-raw/byhand_ecotox-ref-values.xlsx", skip = 5)
-
-#--NOTE: the reference values are higher than the minimum values, so I need to fix this in the 'fitting'
-ref_eco %>%
-  left_join(d5.tmp)
-
-# d6. do nothing, used to overwrite 0s-----------------------------------------
+# d6. used to overwrite 0s-----------------------------------------
 
 d6 <- d5
 
@@ -158,103 +152,37 @@ d7 %>%
   scale_y_log10()
 
 
-# d8. assign them to their PLI group ---------------------------------------
+# d8. keep only the 'pli_listofmetrics', assign them to their PLI group ---------------------------------------
+
+#--does not include scigrow
+pli_listofmetrics <-
+  readr::read_csv("data-raw/pli_listofmetrics.csv")
 
 d8 <-
-  d7 %>%
-  dplyr::select(name) %>%
-  dplyr::distinct()
+  pli_listofmetrics %>%
+  dplyr::left_join(d7) %>%
+  dplyr::arrange(n)
 
 
-# 8a. environ fate load, lower is better ---------------------------------------------------
+# d9. keep only certain substances/columns --------------------------------------------
 
-#--three soil degradation values, not clear which PLI uses
-d8 %>%
-  dplyr::filter(grepl("soil", name))
-
-d7 %>%
-  filter(grepl("soil", name)) %>%
-  ggplot(aes(n, value2)) +
-  geom_point(aes(color = name, shape = name), size = 3)
-
-#--use the field days I guess, although things are sprayed in greenhouses
-
-#--bioconcentration factor (BCF)
-
-d8a <-
-  d8 %>%
-  dplyr::mutate(pli_cat = dplyr::case_when(
-    #--Env Fate
-    name == "soil_degradation_dt50_field_days" ~ "env_fate_load",
-    name == "bioconcentration_factor_bcf_l_kg" ~ "env_fate_load",
-    name == "sci_grow" ~ "env_fate_load",
-    #---Env Tox
-    #--short term (acute)
-    name == "birds_acute_ld50_mg_kg" ~ "env_tox_load", #--birds
-    name == "mammals_acute_oral_ld50_mg_kg" ~ "env_tox_load", #--mamals
-    name == "temperate_freshwater_fish_acute_96hr_lc50_mg_l" ~ "env_tox_load", #--fish
-    name == "temperate_freshwater_aquatic_invertebrates_acute_mg_l" ~ "env_tox_load", #--daphnia??
-    name == "algae_acute_72hr_ec50_growth_mg_l" ~ "env_tox_load", #--algae
-    name == "aquatic_plants_acute_7d_ec50_mg_l" ~ "env_tox_load", #--aquatic pl
-    name == "earthworms_acute_14d_lc50_mg_kg" ~ "env_tox_load", #--earthworms
-    name == "honeybees_contact_acute_ld50_ug_bee" ~ "env_tox_load", #--bees?
-    #---long term (chronic)
-    name == "temperate_freshwater_fish_chronic_21d_noec_mg_l" ~ "env_tox_load", #--fish
-    name == "temperate_freshwater_aquatic_invertebrates_chronic_mg_l" ~ "env_tox_load", #--daphnia
-    name == "earthworms_chronic_noec_reproduction_mg_kg" ~ "env_tox_load", #--worms
-    TRUE ~ "DKDC" #--don't know don't care
-  ))
-
-
-d8 <-
-  d8a %>%
-  dplyr::filter(pli_cat != "DKDC")
-
-
-# d9. combine pli cats and data --------------------------------------------
+#--this column is a bitch, no filtering by pesticide_type
+d8 %>% pull(pesticide_type) %>% unique()
 
 d9 <-
   d8 %>%
-  dplyr::left_join(d7) %>%
-  dplyr::select(n, pli_cat, name, substance, value.num = value2)
+  dplyr::select(id, n, pli_cat, name, name_nice, substance, value.num = value2)
+
+d9 %>%
+  filter(pli_cat == "env_fate_load") %>% pull(name) %>% unique()
 
 #--it is kind of big, this might not be the best way to do this
 internal_ppdb <- d9
 
-# C. make nice labels for indices -----------------------------------------
-
-#--make sure it is in the right order
-internal_ppdb %>%
-  dplyr::select(name) %>%
-  dplyr::distinct()
-
-c1 <-
-  tibble(
-  name_nice = c(
-  "Algae, acute",
-  "Aquatic plants, acute",
-  "Bioaccumulation",
-  "Birds, acute",
-  "Earthworms, acute",
-  "Earthworms, chronic",
-  "Honeybees, acute",
-  "Mammals, acute",
-  "Soil binding",
-  "Soil stability",
-  "Freshwater invertebrates, acute",
-  "Freshwater invertebrates, chronic",
-  "Freshwater fish, acute",
-  "Freshwater fish, chronic"))
-
-internal_nicenames <-
-  internal_ppdb %>%
-  dplyr::select(name) %>%
-  dplyr::distinct() %>%
-  bind_cols(c1)
 
 # B. fit and save models ------------------------------------------------
 
-#--this needs to change, needs to use reference values
+#--this is in progress
 #--24 March 2025, starting trying to change these
 #--imagine this sort of df:
 # metric    xmin    xmax   int   slope
@@ -277,27 +205,28 @@ res_bcf <-
 #--build the df to merge
 b1res_holder <- NULL
 
-#--work througNULL#--work through each segment segment
-for (i in 1:ncol(res_bcf)){
+#--work through each segment segment
 
+#--I have no idea what the warning is, it works so ignore it I guess
+for (i in 1:ncol(res_bcf)) {
   tmp.bcf1 <-
     ref_bcf %>%
     slice(i)
 
-  tmp.bcf2 <- tibble(x = c(tmp.bcf1$xmin, tmp.bcf1$xmax),
-                     y = c(tmp.bcf1$ymin, tmp.bcf1$ymax))
+  tmp.bcf2 <- tibble(
+    x = c(tmp.bcf1$xmin, tmp.bcf1$xmax),
+    y = c(tmp.bcf1$ymin, tmp.bcf1$ymax)
+  )
 
   tmp.int <- as.numeric(lm(y ~ x, data = tmp.bcf2)$coefficients[1])
   tmp.slp <- as.numeric(lm(y ~ x, data = tmp.bcf2)$coefficients[2])
 
-  res <- tibble(
-    segment = i,
-    int = tmp.int,
-    slp = tmp.slp
-  )
-    b1res_holder <-
-      b1res_holder %>%
-      rbind(res)
+  res <- tibble(segment = i,
+                int = tmp.int,
+                slp = tmp.slp)
+  b1res_holder <-
+    b1res_holder %>%
+    rbind(res)
 
 }
 
@@ -307,7 +236,10 @@ b1 <-
 
 tst <- b1 %>%
   filter(segment == 1)
+
 50 * tst$slp + tst$int
+
+internal_mod_bcf <- b1
 
 # b2. soil degrad model -----------------------------------------------------------
 #--soil degradation, dt50
@@ -359,87 +291,15 @@ tst <- b2 %>%
 
 370 * tst$slp + tst$int
 
-# b3. linear for all others --------------------------------------------------
+internal_mod_dt50 <- b2
 
-## I need to think about this. Higher is better for these,
-#--so higher values than the reference value mean lower PLI
+# b3. just an equation for ecotox vals --------------------------------------------------
+#--this should simply be a calculator
+# PLI = 1 / (value/reference)
 
-ref_eco <-
+internal_mod_ecotox <-
   readxl::read_excel("data-raw/byhand_ecotox-ref-values.xlsx", skip = 5) %>%
-  mutate(xmin = 0,
-         ymin = 0,
-         xmax = reference_substance_value,
-         ymax = 1) %>%
-  select(name, xmin, ymin, xmax, ymax)
-
-#--place results will be stored
-res_eco <-
-  ref_eco %>%
-  select(name, xmin, xmax) %>%
-  mutate(segment = 1)
-
-#--build the df to merge
-b3res_holder <- NULL
-
-#--work through each metric individually
-
-for (i in 1:ncol(res_eco)){
-
-  tmp.eco1 <-
-    ref_eco %>%
-    slice(i)
-
-  tmp.dt502 <- tibble(x = c(tmp.dt501$xmin, tmp.dt501$xmax),
-                      y = c(tmp.dt501$ymin, tmp.dt501$ymax))
-
-  tmp.int <- as.numeric(lm(y ~ x, data = tmp.dt502)$coefficients[1])
-  tmp.slp <- as.numeric(lm(y ~ x, data = tmp.dt502)$coefficients[2])
-
-  res <- tibble(
-    segment = i,
-    int = tmp.int,
-    slp = tmp.slp
-  )
-  b2res_holder <-
-    b2res_holder %>%
-    rbind(res)
-
-}
-
-b2 <-
-  res_dt50 %>%
-  left_join(b2res_holder)
-
-tst <- b2 %>%
-  filter(segment == 4)
-
-370 * tst$slp + tst$int
-
-
-
-
-
-
-
-
-
-#################OLD
-inds_refs2 <- intersect(inds, ref_eco %>% pull(name) %>% unique())
-
-b3 <-
-  ref_eco %>%
-  filter(name == inds_refs2[1]) %>%
-  select(-reference_substance_name) %>%
-  bind_rows(
-    internal_ppdb %>%
-      filter(name == inds_refs2[1]) %>%
-      filter(value.num == max(value.num)) %>%
-      select(name, reference_substance_value = value.num) %>%
-      mutate(pli_value = 0)
-  )
-
-b3
-lm(pli_value ~ 1/reference_substance_value, data = b3)
+  select(1, 3)
 
 # write it ----------------------------------------------------------------
 
@@ -447,6 +307,7 @@ usethis::use_data(internal_ppdb,
                   #internal_antex,
                   internal_nicenames,
                   internal_mod_bcf,
-                  internal_mod_soil,
+                  internal_mod_dt50,
+                  internal_mod_ecotox,
                   internal = TRUE, overwrite = TRUE)
 

@@ -1,6 +1,7 @@
 #--make an example dataset
 #--elicted data will have to be pre-processed, for sure
 
+rm(list = ls())
 
 a0 <-
   readxl::read_excel("data-raw/elicitations/ANT - compost lettuce.xlsx", skip = 5) %>%
@@ -13,12 +14,12 @@ a0 <-
 
 a1 <-
   a0 %>%
-  dplyr::mutate(ai_con_g_g = ai_conc/100,
-                prod_amt_g_ha = prod_amt * 1000) %>%
-  dplyr::mutate(ai_con_g_g = ifelse(is.na(ai_con_g_g), 0, ai_con_g_g),
-                prod_amt_g_ha = ifelse(is.na(prod_amt_g_ha), 0, prod_amt_g_ha),
+  dplyr::mutate(prodconc_gai_g = ai_conc/100,
+                prodamt_g_ha = prod_amt * 1000) %>%
+  dplyr::mutate(prodconc_gai_g = ifelse(is.na(prodconc_gai_g), 0, prodconc_gai_g),
+                prodamt_g_ha = ifelse(is.na(prodamt_g_ha), 0, prodamt_g_ha),
                 ai_name = ifelse(is.na(ai_name), "none", ai_name)) %>%
-  dplyr::select(title, scenario, ai_name, ai_con_g_g, prod_amt_g_ha)
+  dplyr::select(title, scenario, ai_name, prodconc_gai_g, prodamt_g_ha)
 
 pli_exdat <- a1
 
