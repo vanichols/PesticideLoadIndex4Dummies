@@ -16,16 +16,46 @@ GetLoadIndex <- function(f_dat = pli_exdat){
     dplyr::filter(ai_name != "none") %>%
     dplyr::pull(ai_name)
 
+  #--filter the ppdb for only those ais
   d0 <-
     internal_ppdb %>%
-    dplyr::mutate(liv = n/max(n)) %>%
+    dplyr::mutate(liv = n/max(n)) %>% #--wtf is this for?
     dplyr::filter(substance %in% a1) %>%
     dplyr::select(pli_cat, name, substance, value.num)
 
   dall <- NULL
 
-  #--work through the indicators one at a time
-  inds <- internal_ppdb %>% dplyr::pull(name) %>% unique()
+  #--work through the indicators one group at a time
+
+  #--these require unique interpolations (not strictly linear)
+  envfate_inds <-
+    d0 %>%
+    dplyr::filter(pli_cat == "env_fate_load") %>%
+    pull(name) %>%
+    unique()
+
+  d.ef1 <-
+    d0 %>%
+    dplyr::filter(name == envfate_inds[1])
+
+  mod.tmp <- internal_mods[[i]]
+
+  tmp.p <- predict(mod.tmp, d.tmp1)
+
+  d.tmp2 <-
+    d.tmp1 %>%
+    dplyr::mutate(load_index = tmp.p)
+
+  dall <- dplyr::bind_rows(dall, d.tmp2)
+
+
+
+  envtox_inds <-
+    d0 %>%
+    dplyr::filter(pli_cat == "env_tox_load") %>%
+    pull(name) %>%
+    unique()
+
 
   for(i in 1:length(inds)){
 

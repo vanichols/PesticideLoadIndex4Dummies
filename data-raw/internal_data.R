@@ -255,86 +255,175 @@ internal_nicenames <-
 # B. fit and save models ------------------------------------------------
 
 #--this needs to change, needs to use reference values
-
-inds <- internal_ppdb %>% pull(name) %>% unique()
-
-ref_envload <-
-  readxl::read_excel("data-raw/byhand_envload-ref-values.xlsx", skip = 5) %>%
-  fill(name) %>%
-  mutate(ref_plivalue = as.numeric(ref_plivalue)) %>%
-  filter(name %in% (internal_ppdb %>% pull(name) %>% unique()))
-
-#--the reference values from the UK-PLI don't match this approach. fuck.
-internal_ppdb %>%
-  mutate(liv = n/max(n),
-         name = as.factor(name)) %>%
-  filter(name == inds[1]) %>%
-  ggplot(aes(value.num, liv)) +
-  geom_point() +
-  geom_point(data = ref_envload %>% filter(name == "soil_degradation_dt50_field_days"),
-             aes(x = value, ref_plivalue), color = "red") +
-  scale_x_log10()
-
-#--use a linear model between points for soil degradation and bioconcentratoin
-
-inds_refs <- intersect(inds, ref_envload %>% pull(name) %>% unique())
-
+#--24 March 2025, starting trying to change these
+#--imagine this sort of df:
+# metric    xmin    xmax   int   slope
+# DT50      0       30       0     0.004
 
 # b1. bcf model -----------------------------------------------------------
 #--bioconcentration
 
-b1 <-
-  ref_envload %>%
-  filter(name == inds_refs[1])
+ref_bcf <-
+  readxl::read_excel("data-raw/byhand_bcf-ref-values.xlsx", skip = 5) %>%
+  mutate_at(c(2, 3, 4, 5), as.numeric) %>%
+  fill(name)
 
-internal_mod_bcf <- NULL
+#--place results will be stored
+res_bcf <-
+  ref_bcf %>%
+  select(name, xmin, xmax) %>%
+  mutate(segment = 1:n())
 
-for(i in 1:(nrow(b1)-1)){
+#--build the df to merge
+b1res_holder <- NULL
 
-  tmp.start <- i
-  tmp.stop <- i + 1
+#--work througNULL#--work through each segment segment
+for (i in 1:ncol(res_bcf)){
 
-  b1.tmp <-
-    b1 %>%
-    slice(tmp.start:tmp.stop)
+  tmp.bcf1 <-
+    ref_bcf %>%
+    slice(i)
 
-  my.mod <- lm(ref_plivalue ~ value, data = b1.tmp)
+  tmp.bcf2 <- tibble(x = c(tmp.bcf1$xmin, tmp.bcf1$xmax),
+                     y = c(tmp.bcf1$ymin, tmp.bcf1$ymax))
 
-  internal_mod_bcf[[i]] <- my.mod
-  print(i)
+  tmp.int <- as.numeric(lm(y ~ x, data = tmp.bcf2)$coefficients[1])
+  tmp.slp <- as.numeric(lm(y ~ x, data = tmp.bcf2)$coefficients[2])
+
+  res <- tibble(
+    segment = i,
+    int = tmp.int,
+    slp = tmp.slp
+  )
+    b1res_holder <-
+      b1res_holder %>%
+      rbind(res)
 
 }
+
+b1 <-
+  res_bcf %>%
+  left_join(b1res_holder)
+
+tst <- b1 %>%
+  filter(segment == 1)
+50 * tst$slp + tst$int
 
 # b2. soil degrad model -----------------------------------------------------------
-#--soil degradation
+#--soil degradation, dt50
 
-b2 <-
-  ref_envload %>%
-  filter(name == inds_refs[2])
+ref_dt50 <-
+  readxl::read_excel("data-raw/byhand_dt50-ref-values.xlsx", skip = 5) %>%
+  mutate_at(c(2, 3, 4, 5), as.numeric) %>%
+  fill(name)
 
-internal_mod_soil <- NULL
+#--place results will be stored
+res_dt50 <-
+  ref_dt50 %>%
+  select(name, xmin, xmax) %>%
+  mutate(segment = 1:n())
 
-for(i in 1:(nrow(b2)-1)){
+#--build the df to merge
+b2res_holder <- NULL
 
-  tmp.start <- i
-  tmp.stop <- i + 1
+#--work througNULL#--work through each segment segment
+for (i in 1:ncol(res_dt50)){
 
-  b2.tmp <-
-    b2 %>%
-    slice(tmp.start:tmp.stop)
+  tmp.dt501 <-
+    ref_dt50 %>%
+    slice(i)
 
-  my.mod <- lm(ref_plivalue ~ value, data = b2.tmp)
+  tmp.dt502 <- tibble(x = c(tmp.dt501$xmin, tmp.dt501$xmax),
+                     y = c(tmp.dt501$ymin, tmp.dt501$ymax))
 
-  internal_mod_soil[[i]] <- my.mod
-  print(i)
+  tmp.int <- as.numeric(lm(y ~ x, data = tmp.dt502)$coefficients[1])
+  tmp.slp <- as.numeric(lm(y ~ x, data = tmp.dt502)$coefficients[2])
+
+  res <- tibble(
+    segment = i,
+    int = tmp.int,
+    slp = tmp.slp
+  )
+  b2res_holder <-
+    b2res_holder %>%
+    rbind(res)
 
 }
 
+b2 <-
+  res_dt50 %>%
+  left_join(b2res_holder)
 
-# linear for all others? --------------------------------------------------
+tst <- b2 %>%
+  filter(segment == 4)
 
-ref_eco <- readxl::read_excel("data-raw/byhand_ecotox-ref-values.xlsx", skip = 5)
+370 * tst$slp + tst$int
 
+# b3. linear for all others --------------------------------------------------
+
+## I need to think about this. Higher is better for these,
+#--so higher values than the reference value mean lower PLI
+
+ref_eco <-
+  readxl::read_excel("data-raw/byhand_ecotox-ref-values.xlsx", skip = 5) %>%
+  mutate(xmin = 0,
+         ymin = 0,
+         xmax = reference_substance_value,
+         ymax = 1) %>%
+  select(name, xmin, ymin, xmax, ymax)
+
+#--place results will be stored
+res_eco <-
+  ref_eco %>%
+  select(name, xmin, xmax) %>%
+  mutate(segment = 1)
+
+#--build the df to merge
+b3res_holder <- NULL
+
+#--work through each metric individually
+
+for (i in 1:ncol(res_eco)){
+
+  tmp.eco1 <-
+    ref_eco %>%
+    slice(i)
+
+  tmp.dt502 <- tibble(x = c(tmp.dt501$xmin, tmp.dt501$xmax),
+                      y = c(tmp.dt501$ymin, tmp.dt501$ymax))
+
+  tmp.int <- as.numeric(lm(y ~ x, data = tmp.dt502)$coefficients[1])
+  tmp.slp <- as.numeric(lm(y ~ x, data = tmp.dt502)$coefficients[2])
+
+  res <- tibble(
+    segment = i,
+    int = tmp.int,
+    slp = tmp.slp
+  )
+  b2res_holder <-
+    b2res_holder %>%
+    rbind(res)
+
+}
+
+b2 <-
+  res_dt50 %>%
+  left_join(b2res_holder)
+
+tst <- b2 %>%
+  filter(segment == 4)
+
+370 * tst$slp + tst$int
+
+
+
+
+
+
+
+
+
+#################OLD
 inds_refs2 <- intersect(inds, ref_eco %>% pull(name) %>% unique())
 
 b3 <-
