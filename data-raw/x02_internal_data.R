@@ -31,6 +31,127 @@ rm(list = ls())
 # internal_antex <- a1
 
 
+# B. fit and save models ------------------------------------------------
+
+#--this is in progress
+#--24 March 2025, starting trying to change these
+#--imagine this sort of df:
+# metric    xmin    xmax   int   slope
+# DT50      0       30       0     0.004
+
+# b1. bcf model -----------------------------------------------------------
+#--bioconcentration
+
+ref_bcf <-
+  readxl::read_excel("data-raw/byhand_bcf-ref-values.xlsx", skip = 5) %>%
+  mutate_at(c(2, 3, 4, 5), as.numeric) %>%
+  fill(name)
+
+#--place results will be stored
+res_bcf <-
+  ref_bcf %>%
+  select(name, xmin, xmax) %>%
+  mutate(segment = 1:n())
+
+#--build the df to merge
+b1res_holder <- NULL
+
+#--work through each segment segment
+
+#--I have no idea what the warning is, it works so ignore it I guess
+for (i in 1:ncol(res_bcf)) {
+  tmp.bcf1 <-
+    ref_bcf %>%
+    slice(i)
+
+  tmp.bcf2 <- tibble(
+    x = c(tmp.bcf1$xmin, tmp.bcf1$xmax),
+    y = c(tmp.bcf1$ymin, tmp.bcf1$ymax)
+  )
+
+  tmp.int <- as.numeric(lm(y ~ x, data = tmp.bcf2)$coefficients[1])
+  tmp.slp <- as.numeric(lm(y ~ x, data = tmp.bcf2)$coefficients[2])
+
+  res <- tibble(segment = i,
+                int = tmp.int,
+                slp = tmp.slp)
+  b1res_holder <-
+    b1res_holder %>%
+    rbind(res)
+
+}
+
+b1 <-
+  res_bcf %>%
+  left_join(b1res_holder)
+
+tst <- b1 %>%
+  filter(segment == 1)
+
+50 * tst$slp + tst$int
+
+internal_mod_bcf <- b1
+
+# b2. soil degrad model -----------------------------------------------------------
+#--soil degradation, dt50
+
+ref_dt50 <-
+  readxl::read_excel("data-raw/byhand_dt50-ref-values.xlsx", skip = 5) %>%
+  mutate_at(c(2, 3, 4, 5), as.numeric) %>%
+  fill(name)
+
+#--place results will be stored
+res_dt50 <-
+  ref_dt50 %>%
+  select(name, xmin, xmax) %>%
+  mutate(segment = 1:n())
+
+#--build the df to merge
+b2res_holder <- NULL
+
+#--work througNULL#--work through each segment segment
+for (i in 1:ncol(res_dt50)){
+
+  tmp.dt501 <-
+    ref_dt50 %>%
+    slice(i)
+
+  tmp.dt502 <- tibble(x = c(tmp.dt501$xmin, tmp.dt501$xmax),
+                     y = c(tmp.dt501$ymin, tmp.dt501$ymax))
+
+  tmp.int <- as.numeric(lm(y ~ x, data = tmp.dt502)$coefficients[1])
+  tmp.slp <- as.numeric(lm(y ~ x, data = tmp.dt502)$coefficients[2])
+
+  res <- tibble(
+    segment = i,
+    int = tmp.int,
+    slp = tmp.slp
+  )
+  b2res_holder <-
+    b2res_holder %>%
+    rbind(res)
+
+}
+
+b2 <-
+  res_dt50 %>%
+  left_join(b2res_holder)
+
+tst <- b2 %>%
+  filter(segment == 4)
+
+370 * tst$slp + tst$int
+
+internal_mod_dt50 <- b2
+
+# b3. just an equation for ecotox vals --------------------------------------------------
+#--this should simply be a calculator
+# PLI = 1 / (value/reference)
+
+internal_mod_ecotox <-
+  readxl::read_excel("data-raw/byhand_ecotox-ref-values.xlsx", skip = 5) %>%
+  select(1, 3)
+
 # D. PPDB internal data ---------------------------------------------------
 
 # d0. raw data ----------------------------------------------------------------
@@ -169,6 +290,11 @@ d8 <-
 #--this column is a bitch, no filtering by pesticide_type
 d8 %>% pull(pesticide_type) %>% unique()
 
+d8 %>%
+  group_by(pesticide_type) %>%
+  summarise(n = n()) %>%
+  arrange(-n)
+
 d9 <-
   d8 %>%
   dplyr::select(id, n, pli_cat, name, name_nice, substance, value.num = value2)
@@ -180,126 +306,7 @@ d9 %>%
 internal_ppdb <- d9
 
 
-# B. fit and save models ------------------------------------------------
 
-#--this is in progress
-#--24 March 2025, starting trying to change these
-#--imagine this sort of df:
-# metric    xmin    xmax   int   slope
-# DT50      0       30       0     0.004
-
-# b1. bcf model -----------------------------------------------------------
-#--bioconcentration
-
-ref_bcf <-
-  readxl::read_excel("data-raw/byhand_bcf-ref-values.xlsx", skip = 5) %>%
-  mutate_at(c(2, 3, 4, 5), as.numeric) %>%
-  fill(name)
-
-#--place results will be stored
-res_bcf <-
-  ref_bcf %>%
-  select(name, xmin, xmax) %>%
-  mutate(segment = 1:n())
-
-#--build the df to merge
-b1res_holder <- NULL
-
-#--work through each segment segment
-
-#--I have no idea what the warning is, it works so ignore it I guess
-for (i in 1:ncol(res_bcf)) {
-  tmp.bcf1 <-
-    ref_bcf %>%
-    slice(i)
-
-  tmp.bcf2 <- tibble(
-    x = c(tmp.bcf1$xmin, tmp.bcf1$xmax),
-    y = c(tmp.bcf1$ymin, tmp.bcf1$ymax)
-  )
-
-  tmp.int <- as.numeric(lm(y ~ x, data = tmp.bcf2)$coefficients[1])
-  tmp.slp <- as.numeric(lm(y ~ x, data = tmp.bcf2)$coefficients[2])
-
-  res <- tibble(segment = i,
-                int = tmp.int,
-                slp = tmp.slp)
-  b1res_holder <-
-    b1res_holder %>%
-    rbind(res)
-
-}
-
-b1 <-
-  res_bcf %>%
-  left_join(b1res_holder)
-
-tst <- b1 %>%
-  filter(segment == 1)
-
-50 * tst$slp + tst$int
-
-internal_mod_bcf <- b1
-
-# b2. soil degrad model -----------------------------------------------------------
-#--soil degradation, dt50
-
-ref_dt50 <-
-  readxl::read_excel("data-raw/byhand_dt50-ref-values.xlsx", skip = 5) %>%
-  mutate_at(c(2, 3, 4, 5), as.numeric) %>%
-  fill(name)
-
-#--place results will be stored
-res_dt50 <-
-  ref_dt50 %>%
-  select(name, xmin, xmax) %>%
-  mutate(segment = 1:n())
-
-#--build the df to merge
-b2res_holder <- NULL
-
-#--work througNULL#--work through each segment segment
-for (i in 1:ncol(res_dt50)){
-
-  tmp.dt501 <-
-    ref_dt50 %>%
-    slice(i)
-
-  tmp.dt502 <- tibble(x = c(tmp.dt501$xmin, tmp.dt501$xmax),
-                     y = c(tmp.dt501$ymin, tmp.dt501$ymax))
-
-  tmp.int <- as.numeric(lm(y ~ x, data = tmp.dt502)$coefficients[1])
-  tmp.slp <- as.numeric(lm(y ~ x, data = tmp.dt502)$coefficients[2])
-
-  res <- tibble(
-    segment = i,
-    int = tmp.int,
-    slp = tmp.slp
-  )
-  b2res_holder <-
-    b2res_holder %>%
-    rbind(res)
-
-}
-
-b2 <-
-  res_dt50 %>%
-  left_join(b2res_holder)
-
-tst <- b2 %>%
-  filter(segment == 4)
-
-370 * tst$slp + tst$int
-
-internal_mod_dt50 <- b2
-
-# b3. just an equation for ecotox vals --------------------------------------------------
-#--this should simply be a calculator
-# PLI = 1 / (value/reference)
-
-internal_mod_ecotox <-
-  readxl::read_excel("data-raw/byhand_ecotox-ref-values.xlsx", skip = 5) %>%
-  select(1, 3)
 
 # write it ----------------------------------------------------------------
 
