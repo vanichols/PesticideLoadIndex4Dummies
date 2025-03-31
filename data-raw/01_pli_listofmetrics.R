@@ -1,4 +1,6 @@
 #--show which metrics are included (maybe they will change)
+#--update 31 march 2025, we need some 'human health' component, mammal toxicity?
+#--Add mammals_acute_oral_ld50_mg_kg_2
 
 rm(list = ls())
 
@@ -30,11 +32,13 @@ a3 <-
   distinct()
 
 #--note we aren't including sci grow right now
+#--31 march, add mammal toxicity to use a 'human health'
 
 d4 <-
   a1 %>%
   bind_rows(a2) %>%
-  bind_rows(a3)
+  bind_rows(a3) %>%
+  add_row(name = "mammals_acute_oral_ld50_mg_kg_2")
 
 
 # 2. assign to group ------------------------------------------------------
@@ -61,6 +65,7 @@ d5 <-
   name == "temperate_freshwater_fish_chronic_21d_noec_mg_l" ~ "env_tox_load", #--fish
   name == "temperate_freshwater_aquatic_invertebrates_chronic_mg_l" ~ "env_tox_load", #--daphnia
   name == "earthworms_chronic_noec_reproduction_mg_kg" ~ "env_tox_load", #--worms
+  name == "mammals_acute_oral_ld50_mg_kg_2" ~ "human_health_load", #--worms
   TRUE ~ "DKDC" #--don't know don't care
 ))
 
@@ -88,6 +93,7 @@ d6 <-
     name == "temperate_freshwater_fish_chronic_21d_noec_mg_l" ~ "Freshwater fish, chronic", #--fish
     name == "temperate_freshwater_aquatic_invertebrates_chronic_mg_l" ~ "Freshwater invertebrates, chronic", #--daphnia
     name == "earthworms_chronic_noec_reproduction_mg_kg" ~ "Earthworms, chronic", #--worms
+    name == "mammals_acute_oral_ld50_mg_kg_2" ~ "Mammals oral, acute", #--worms
     TRUE ~ "DKDC" #--don't know don't care
   ))
 

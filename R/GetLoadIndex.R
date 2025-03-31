@@ -7,6 +7,7 @@
 #--using this website as a guide: https://rpubs.com/MarkusLoew/12164
 #--I'm struggling with the units of the load, and multiplying it by the amount applied....
 #--can use 'devtools::load_all()' to get access to things
+#----REPLACED, I JUST CALCULATED THINGS DIRECTLY IN THE DB, NO NEED FOR A PACKAGE NOW
 
 
 GetLoadIndex <- function(f_dat = pli_exdat){

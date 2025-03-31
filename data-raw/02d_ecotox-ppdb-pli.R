@@ -1,4 +1,5 @@
 # created 26 march 2025
+# updated 31 march 2025, remove mammals_acute_oral_ld50
 # replace internal data, just calc pli for every substance
 # in trial phase, interal data is still in place and fxn uses it
 #--separated by pli_category bc it takes a long time to run each one
@@ -53,4 +54,5 @@ res_ecotox %>%
 # write it ----------------------------------------------------------------
 
 res_ecotox %>%
+  filter(name != "mammals_acute_oral_ld50_mg_kg") %>%  #--this one will get listed as human health
   write_rds("data-raw/tidy_ecotox-ppdb-plis.rds")

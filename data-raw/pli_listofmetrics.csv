@@ -11,3 +11,4 @@ temperate_freshwater_aquatic_invertebrates_acute_mg_l,env_tox_load,"Freshwater i
 temperate_freshwater_aquatic_invertebrates_chronic_mg_l,env_tox_load,"Freshwater invertebrates, chronic"
 temperate_freshwater_fish_acute_96hr_lc50_mg_l,env_tox_load,"Freshwater fish, acute"
 temperate_freshwater_fish_chronic_21d_noec_mg_l,env_tox_load,"Freshwater fish, chronic"
+mammals_acute_oral_ld50_mg_kg_2,human_health_load,"Mammals oral, acute"
