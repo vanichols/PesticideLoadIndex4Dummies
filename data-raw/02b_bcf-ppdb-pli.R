@@ -1,12 +1,13 @@
 # created 26 march 2025
 # replace internal data, just calc pli for every substance
-# in trial phase, interal data is still in place and fxn uses it
-#--separated by pli_category bc it takes a long time to run each one
+# BCF has like 300 missing data points (320), not sure how impactful this will be
 
 library(tidyverse)
+library(ggthemes)
 
 Sys.setenv(LANG = "en")
 rm(list = ls())
+theme_set(theme_economist_white())
 
 # A. interpolation models ------------------------------------------------
 
@@ -25,7 +26,7 @@ ref_bcf <-
   fill(name)
 
 #--place results will be stored
-res_bcf <-
+astore_bcf <-
   ref_bcf %>%
   select(name, xmin, xmax) %>%
   mutate(segment = 1:n())
@@ -36,7 +37,8 @@ a1res_holder <- NULL
 #--work through each segment segment
 
 #--I have no idea what the warning is, it works so ignore it I guess
-for (i in 1:ncol(res_bcf)) {
+for (i in 1:ncol(astore_bcf)) {
+
   tmp.bcf1 <-
     ref_bcf %>%
     slice(i)
@@ -49,35 +51,45 @@ for (i in 1:ncol(res_bcf)) {
   tmp.int <- as.numeric(lm(y ~ x, data = tmp.bcf2)$coefficients[1])
   tmp.slp <- as.numeric(lm(y ~ x, data = tmp.bcf2)$coefficients[2])
 
-  res <- tibble(segment = i,
+  tmp.res <- tibble(segment = i,
                 int = tmp.int,
                 slp = tmp.slp)
   a1res_holder <-
     a1res_holder %>%
-    rbind(res)
+    rbind(tmp.res)
 
 }
 
+#--need to increase the max bc there are lots of values higher than 5674
+#--those will just be changed to a value of 1
+
 a1 <-
-  res_bcf %>%
-  left_join(a1res_holder)
+  astore_bcf %>%
+  left_join(a1res_holder) %>%
+  mutate(xmax = ifelse(xmin == 5000, 100000, xmax))
 
 tst <- a1 %>%
   filter(segment == 1)
 
 50 * tst$slp + tst$int
-d <- d9
+
+tibble(
+  value.num = seq(1:5674),
+  name = "bioconcentration_factor_bcf_l_kg") %>%
+  left_join(a1) %>%
+  filter(value.num > xmin & value.num < xmax) %>%
+  distinct() %>%
+  mutate(PLI_per_unit = slp*value.num + int) %>%
+  ggplot(aes(x = value.num, y = PLI_per_unit)) +
+  geom_point() +
+  labs(x = "BCF value from PPDB",
+       y = "PLI value (0-1)",
+       caption = "Anchor points defined by Rainford et al. 2022 based on policy-derived definitions")
+
+ggsave("data-raw/fig_bcf-scaling.png", width = 6, height = 5)
 
 
 # E. calc PLI for every substance -----------------------------------------
-
-#--2,000 substances
-e0 <-
-  d %>%
-  select(substance) %>%
-  distinct()
-
-#--work through the indicators one category at a time
 
 #--these require unique interpolations (piecewise)
 
@@ -85,25 +97,56 @@ e0 <-
 
 d <- read_rds("data-raw/tidy_ppdb.rds")
 
+#--955 substances
 tmp.bcf <-
   d %>%
   filter(name == "bioconcentration_factor_bcf_l_kg")
 
-res_bcf <- NULL
+#--start with segment #1
 
-for (i in 1:nrow(tmp.bcf)){
+s1 <-
+  tmp.bcf %>%
+  filter(value.num <= (a1 %>% filter(segment == 1) %>% pull(xmax))) %>%
+  left_join(a1 %>% filter(segment == 1)) %>%
+  mutate(PLI_per_unit = slp*value.num + int) %>%
+  select(id, name, name_nice, pli_cat, substance, value.num, PLI_per_unit)
 
-  tmp.res_bcf <-
-    tmp.bcf %>%
-    slice(i) %>%
-    left_join(a1) %>%
-    filter(value.num > xmin & value.num < xmax) %>%
-    mutate(PLI_per_unit = slp*value.num + int,
-           proc_nu = i) %>%
-    select(proc_nu, id, name, name_nice, pli_cat, substance, value.num, PLI_per_unit)
+s2 <-
+  tmp.bcf %>%
+  filter(value.num >= (a1 %>% filter(segment == 2) %>% pull(xmin))) %>%
+  filter(value.num < (a1 %>% filter(segment == 2) %>% pull(xmax))) %>%
+  left_join(a1 %>% filter(segment == 2)) %>%
+  mutate(PLI_per_unit = slp*value.num + int) %>%
+  select(id, name, name_nice, pli_cat, substance, value.num, PLI_per_unit)
 
-  res_bcf <- bind_rows(res_bcf, tmp.res_bcf)
-}
+#--there are some monster BCF values...
+s3 <-
+  tmp.bcf %>%
+  filter(value.num >= (a1 %>% filter(segment == 3) %>% pull(xmin))) %>%
+  left_join(a1 %>% filter(segment == 3)) %>%
+  mutate(PLI_per_unit = slp*value.num + int,
+         PLI_per_unit = ifelse(PLI_per_unit > 1, 1, PLI_per_unit)) %>%
+  select(id, name, name_nice, pli_cat, substance, value.num, PLI_per_unit)
+
+
+#--600, where did the other 300 go?
+#--there are like 300 without a value for BCF
+res_bcf <-
+  s1 %>%
+  bind_rows(s2) %>%
+  bind_rows(s3)
+
+hmm <- tmp.bcf %>% pull(id)
+
+res_bcf
+
+tmp.bcf %>%
+  filter(id %in% setdiff(hmm, res_bcf %>% pull(id)))
+
+
+
+# write it ----------------------------------------------------------------
+
 
 res_bcf %>%
   write_rds("data-raw/tidy_bcf-ppdb-plis.rds")

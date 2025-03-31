@@ -11,6 +11,7 @@ library(tidyverse)
 #--let's start with a smaller db
 #--cyprodinil and glyphosate
 
+#--
 d1 <-
   read_rds("data-raw/tidy_bcf-ppdb-plis.rds") %>%
   mutate(PLI_per_unit = ifelse(PLI_per_unit > 1, 1, PLI_per_unit)) #%>%
@@ -32,6 +33,15 @@ d4 <- read_rds("data-raw/tidy_hh-ppdb-plis.rds") %>%
 
 # A. fate metrics ---------------------------------------------------------
 
+#--bcf
+d1 %>%
+  ggplot(aes(PLI_per_unit)) +
+  geom_histogram()
+
+#--dt50
+d2 %>%
+  ggplot(aes(PLI_per_unit)) +
+  geom_histogram()
 
 #--take average of bcf and dt50 (fates)
 res_f <-
@@ -40,6 +50,15 @@ res_f <-
   group_by(id, pli_cat, substance) %>%
   summarise(PLI_per_unit = mean(PLI_per_unit, na.rm = T))
 
+#--no NAs
+res_f %>%
+  filter(is.na(PLI_per_unit))
+
+#--that is a weird piling up around certain middle values
+
+res_f %>%
+  ggplot(aes(PLI_per_unit)) +
+  geom_histogram()
 
 # B. human health ---------------------------------------------------------
 
@@ -104,10 +123,33 @@ res2 <-
   mutate(env_mean = mean(env_fate_load, na.rm = T),
          hh_mean = mean(human_health_load, na.rm = T),
          eco_mean = mean(env_tox_load, na.rm = T)) %>%
-  mutate(env_load = ifelse(is.na(env_fate_load), env_mean, env_fate_load),
-         hh_load = ifelse(is.na(human_health_load), hh_mean, human_health_load),
-         eco_load = ifelse(is.na(env_tox_load), eco_mean, env_tox_load)) %>%
-  select(id, substance, env_load, hh_load, eco_load)
+  mutate(env_load2 = ifelse(is.na(env_fate_load), env_mean, env_fate_load),
+         hh_load2 = ifelse(is.na(human_health_load), hh_mean, human_health_load),
+         eco_load2 = ifelse(is.na(env_tox_load), eco_mean, env_tox_load)) %>%
+  select(id, substance,
+         env_load = env_fate_load,
+         env_load2,
+         hh_load = human_health_load,
+         hh_load2,
+         eco_load = env_tox_load,
+         eco_load2)
+
+
+# look at it --------------------------------------------------------------
+
+#--something is wrong with env fate? not many values?
+res1 %>%
+  pivot_longer(3:5) %>%
+  filter(!is.na(value)) %>%
+  group_by(name) %>%
+  mutate(n = n(),
+         name = paste0(name, " (", n, ")")) %>%
+  ggplot(aes(value)) +
+  geom_histogram(aes(fill = name), show.legend = F, color = "black") +
+  facet_wrap(~name) +
+  coord_flip()
+
+ggsave("data-raw/fig_pli-distributions.png", width = 12, height = 8)
 
 
 res2 %>%

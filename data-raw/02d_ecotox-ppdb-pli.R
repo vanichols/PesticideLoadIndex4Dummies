@@ -34,6 +34,21 @@ tmp.ecotox <-
   left_join(a3, relationship = "many-to-many") %>%
   mutate(PLI_per_unit = 1 / (value.num/reference_substance_value))
 
+
+# visualize it ------------------------------------------------------------
+
+tmp.ecotox %>%
+  mutate(pli = ifelse(PLI_per_unit > 1, 1, PLI_per_unit)) %>%
+  ggplot(aes(pli)) +
+  geom_histogram(aes(fill = name_nice), color = "black", show.legend = F) +
+  coord_flip() +
+  labs(y = "\nNumber of substances with a given PLI value",
+       x = "PLI value\n") +
+  facet_wrap(~name_nice, scales = "free", labeller = label_wrap_gen(width = 15))
+
+
+ggsave("data-raw/fig_ecotox-scaling.png", width = 12, height = 10)
+
 res_ecotox <-
   tmp.ecotox %>%
   select(id, name, name_nice, pli_cat, substance, pesticide_type, value.num, PLI_per_unit)
