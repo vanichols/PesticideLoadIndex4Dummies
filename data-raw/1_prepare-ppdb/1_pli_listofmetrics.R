@@ -1,60 +1,88 @@
-#--show which metrics are included (maybe they will change)
-#--update 31 march 2025, we need some 'human health' component, mammal toxicity?
-#--Add mammals_acute_oral_ld50_mg_kg_2
+#--starts by reading in things we have defined reference values for
+#--no reference value means not included
+#--this will show which metrics are included (maybe they will change)
+#--note we aren't including sci grow right now
+#--we need some 'human health' component, mammal toxicity for now
+#--March 31 2025 - Added mammals_acute_oral_ld50_mg_kg_2
+
 
 rm(list = ls())
 
 library(tidyverse)
 
+# A. BCF ref values -------------------------------------------------------
 
-# 1. which metrics -----------------------------------------------------------
+a1 <- system.file("extdata",
+                  "byhand_bcf-ref-values.xlsx",
+                  package = "PesticideLoadIndex4Dummies")
 
-a1 <-
-  readxl::read_excel("data-raw/byhand_bcf-ref-values.xlsx", skip = 5) %>%
+a2 <- readxl::read_excel(a1, skip = 5)
+
+a3 <-
+  a2 %>%
   fill(name) %>%
   select(name) %>%
   distinct()
-#--bioconcentration_factor_bcf_lkg
+
+  #--bioconcentration_factor_bcf_lkg
 
 #--three soil degradation values, not clear which PLI uses
 #--use the field days I guess, although things are sprayed in greenhouses
 
-a2 <-
-  readxl::read_excel("data-raw/byhand_dt50-ref-values.xlsx", skip = 5) %>%
+
+# B. DT50 refs-----------------------------------------------------------------
+
+b1 <- system.file("extdata",
+                  "byhand_dt50-ref-values.xlsx",
+                  package = "PesticideLoadIndex4Dummies")
+
+b2 <- readxl::read_excel(b1, skip = 5)
+
+b3 <-
+  b2 %>%
   fill(name) %>%
   select(name) %>%
   distinct()
 
-a3 <-
-  readxl::read_excel("data-raw/byhand_ecotox-ref-values.xlsx", skip = 5) %>%
+
+# C. ecotox refs ----------------------------------------------------------
+
+c1 <- system.file("extdata",
+                  "byhand_ecotox-ref-values.xlsx",
+                  package = "PesticideLoadIndex4Dummies")
+
+c2 <- readxl::read_excel(c1, skip = 5)
+
+c3 <-
+  c2 %>%
   fill(name) %>%
   select(name) %>%
   distinct()
 
-#--note we aren't including sci grow right now
-#--31 march, add mammal toxicity to use a 'human health'
 
-d4 <-
-  a1 %>%
-  bind_rows(a2) %>%
-  bind_rows(a3) %>%
-  add_row(name = "mammals_acute_oral_ld50_mg_kg_2")
+# D. mammalian tox ref ----------------------------------------------------
+
+d <-
+  a3 %>%
+  bind_rows(b3) %>%
+  bind_rows(c3) %>%
+  add_row(name = "mammals_acute_oral_ld50_mg_kg")
 
 
-# 2. assign to group ------------------------------------------------------
+# E. assign to pli type ------------------------------------------------------
 
-#--assign to a group
-d5 <-
-  d4 %>%
+e <-
+  d %>%
   dplyr::mutate(pli_cat = dplyr::case_when(
   #--Env Fate
   name == "soil_degradation_dt50_field_days" ~ "env_fate_load",
   name == "bioconcentration_factor_bcf_l_kg" ~ "env_fate_load",
   #name == "sci_grow" ~ "env_fate_load",
+  #--Human health
+  name == "mammals_acute_oral_ld50_mg_kg" ~ "env_tox_load", #--mamals
   #---Env Tox
   #--short term (acute)
   name == "birds_acute_ld50_mg_kg" ~ "env_tox_load", #--birds
-  name == "mammals_acute_oral_ld50_mg_kg" ~ "env_tox_load", #--mamals
   name == "temperate_freshwater_fish_acute_96hr_lc50_mg_l" ~ "env_tox_load", #--fish
   name == "temperate_freshwater_aquatic_invertebrates_acute_mg_l" ~ "env_tox_load", #--daphnia??
   name == "algae_acute_72hr_ec50_growth_mg_l" ~ "env_tox_load", #--algae
@@ -65,24 +93,25 @@ d5 <-
   name == "temperate_freshwater_fish_chronic_21d_noec_mg_l" ~ "env_tox_load", #--fish
   name == "temperate_freshwater_aquatic_invertebrates_chronic_mg_l" ~ "env_tox_load", #--daphnia
   name == "earthworms_chronic_noec_reproduction_mg_kg" ~ "env_tox_load", #--worms
-  name == "mammals_acute_oral_ld50_mg_kg_2" ~ "human_health_load", #--worms
   TRUE ~ "DKDC" #--don't know don't care
 ))
 
 
 
-# 3. make nice labels -----------------------------------------------------
-d6 <-
-  d5 %>%
+# F. make nice labels -----------------------------------------------------
+
+f <-
+  e %>%
   dplyr::mutate(name_nice = dplyr::case_when(
     #--Env Fate
     name == "soil_degradation_dt50_field_days" ~ "Soil persistence",
     name == "bioconcentration_factor_bcf_l_kg" ~ "Bioaccumulation",
     #name == "sci_grow" ~ "env_fate_load",
+    #--Human health
+    name == "mammals_acute_oral_ld50_mg_kg" ~ "Mammals oral, acute", #--worms
     #---Env Tox
     #--short term (acute)
     name == "birds_acute_ld50_mg_kg" ~ "Birds, acute", #--birds
-    name == "mammals_acute_oral_ld50_mg_kg" ~ "Mammals, acute", #--mamals
     name == "temperate_freshwater_fish_acute_96hr_lc50_mg_l" ~ "Freshwater fish, acute", #--fish
     name == "temperate_freshwater_aquatic_invertebrates_acute_mg_l" ~ "Freshwater invertebrates, acute", #--daphnia??
     name == "algae_acute_72hr_ec50_growth_mg_l" ~ "Algae, acute", #--algae
@@ -93,15 +122,15 @@ d6 <-
     name == "temperate_freshwater_fish_chronic_21d_noec_mg_l" ~ "Freshwater fish, chronic", #--fish
     name == "temperate_freshwater_aquatic_invertebrates_chronic_mg_l" ~ "Freshwater invertebrates, chronic", #--daphnia
     name == "earthworms_chronic_noec_reproduction_mg_kg" ~ "Earthworms, chronic", #--worms
-    name == "mammals_acute_oral_ld50_mg_kg_2" ~ "Mammals oral, acute", #--worms
     TRUE ~ "DKDC" #--don't know don't care
   ))
 
 
 # write data --------------------------------------------------------------
 
-pli_listofmetrics <- d6
+pli_listofmetrics <- f
 
 usethis::use_data(pli_listofmetrics, overwrite = TRUE)
 
-pli_listofmetrics %>% write_csv("data-raw/pli_listofmetrics.csv")
+pli_listofmetrics %>%
+  write_csv("inst/pkgdata/pli_listofmetrics.csv")
