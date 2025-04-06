@@ -89,4 +89,5 @@ c %>%
 # write it ----------------------------------------------------------------
 
 c %>%
+  distinct() %>%
   write_rds("inst/pkgdata/tidy_ppdb-ecotox-plis.rds")

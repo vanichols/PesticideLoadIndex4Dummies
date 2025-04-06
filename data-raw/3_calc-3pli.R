@@ -1,5 +1,6 @@
 #--combine all the metrics into one db, get three PLI values for each substance
-#--created 31 march 2025, trying to replace the internal thing
+#--created 31 march 2025
+#--started cleanup 6 april 2025
 
 rm(list = ls())
 
@@ -11,42 +12,61 @@ library(tidyverse)
 #--let's start with a smaller db
 #--cyprodinil and glyphosate
 
-#--
-d1 <-
-  read_rds("data-raw/tidy_bcf-ppdb-plis.rds") %>%
-  mutate(PLI_per_unit = ifelse(PLI_per_unit > 1, 1, PLI_per_unit)) #%>%
-  #filter(id %in% c(199, 373, 331))
+a0 <- system.file("pkgdata",
+                  "tidy_ppdb-bcf-plis.rds",
+                  package = "PesticideLoadIndex4Dummies")
 
-d2 <- read_rds("data-raw/tidy_dt50-ppdb-plis.rds") %>%
-  mutate(PLI_per_unit = ifelse(PLI_per_unit > 1, 1, PLI_per_unit)) #%>%
-#filter(id %in% c(199, 373, 331))
+bcf <-
+  readr::read_rds(a0) %>%
+  mutate(PLI_per_unit = ifelse(PLI_per_unit>1, 1, PLI_per_unit))
 
-d3 <- read_rds("data-raw/tidy_ecotox-ppdb-plis.rds") %>%
-  mutate(PLI_per_unit = ifelse(PLI_per_unit > 1, 1, PLI_per_unit)) #%>%
-  #filter(id %in% c(199, 373, 331, 101))
 
-d4 <- read_rds("data-raw/tidy_hh-ppdb-plis.rds") %>%
-  mutate(PLI_per_unit = ifelse(PLI_per_unit > 1, 1, PLI_per_unit)) #%>%
-  #filter(id %in% c(199, 373, 331))
+b0 <- system.file("pkgdata",
+                  "tidy_ppdb-dt50-plis.rds",
+                  package = "PesticideLoadIndex4Dummies")
+
+dt50 <-
+  readr::read_rds(b0) %>%
+  mutate(PLI_per_unit = ifelse(PLI_per_unit>1, 1, PLI_per_unit))
+
+
+c0 <- system.file("pkgdata",
+                  "tidy_ppdb-ecotox-plis.rds",
+                  package = "PesticideLoadIndex4Dummies")
+
+et <-
+  readr::read_rds(c0) %>%
+  mutate(PLI_per_unit = ifelse(PLI_per_unit>1, 1, PLI_per_unit))
+
+
+d0 <- system.file("pkgdata",
+                  "tidy_ppdb-hh-plis.rds",
+                  package = "PesticideLoadIndex4Dummies")
+
+hh <-
+  readr::read_rds(d0) %>%
+  mutate(PLI_per_unit = ifelse(PLI_per_unit>1, 1, PLI_per_unit))
+
+
 
 #--we have a fate, hh and tox category
 
-# A. fate metrics ---------------------------------------------------------
+# F. fate metrics ---------------------------------------------------------
 
 #--bcf
-d1 %>%
+bcf %>%
   ggplot(aes(PLI_per_unit)) +
   geom_histogram()
 
 #--dt50
-d2 %>%
+dt50 %>%
   ggplot(aes(PLI_per_unit)) +
   geom_histogram()
 
 #--take average of bcf and dt50 (fates)
 res_f <-
-  d1 %>%
-  bind_rows(d2) %>%
+  bcf %>%
+  bind_rows(dt50) %>%
   group_by(id, pli_cat, substance) %>%
   summarise(PLI_per_unit = mean(PLI_per_unit, na.rm = T))
 
@@ -60,55 +80,55 @@ res_f %>%
   ggplot(aes(PLI_per_unit)) +
   geom_histogram()
 
-# B. human health ---------------------------------------------------------
+
+# H. human health ---------------------------------------------------------
 
 #--only have one metric right now, take average if we add more
 res_hh <-
-  d4 %>%
+  hh %>%
   group_by(id, pli_cat, substance) %>%
   summarise(PLI_per_unit = mean(PLI_per_unit, na.rm = T))
 
-# C. environmental tox ---------------------------------------------------------
+# E. environmental tox ---------------------------------------------------------
 
 #--oofffff
-d3 %>%
+et %>%
   pull(name) %>%
   unique()
 
-#--average over chronic and acute when we brought in that data
+#--average over chronic and acute when we have both?
 
-c1 <-
-  d3 %>%
+e1 <-
+  et %>%
   filter(grepl("invertebrates", name)) %>%
   group_by(id, pli_cat, substance, pesticide_type) %>%
   summarise(PLI_per_unit = mean(PLI_per_unit, na.rm = T)) %>%
   mutate(name = "invertebrates")
 
-c2 <-
-  d3 %>%
+e2 <-
+  et %>%
   filter(grepl("fish", name)) %>%
   group_by(id, pli_cat, substance, pesticide_type) %>%
   summarise(PLI_per_unit = mean(PLI_per_unit, na.rm = T)) %>%
   mutate(name = "fish")
 
 #--combine
-c3 <-
-  d3 %>%
+e3 <-
+  et %>%
   filter(!grepl("inverte|fish", name)) %>%
-  bind_rows(c1) %>%
-  bind_rows(c2)
+  bind_rows(e1) %>%
+  bind_rows(e2)
 
 #--average all of them? Take max value?
 #--I think it is fair to take the maximum value
 
 res_ecotox <-
-  c3 %>%
+  e3 %>%
   group_by(id, pli_cat, substance, pesticide_type) %>%
   summarise(PLI_per_unit = max(PLI_per_unit, na.rm = T))
 
 
-
-# D. combine them ---------------------------------------------------------
+# G. combine them ---------------------------------------------------------
 
 res1 <-
   res_f %>%
@@ -137,7 +157,7 @@ res2 <-
 
 # look at it --------------------------------------------------------------
 
-#--something is wrong with env fate? not many values?
+#--something is wrong with env fate? less values?
 res1 %>%
   pivot_longer(3:5) %>%
   filter(!is.na(value)) %>%
@@ -146,12 +166,15 @@ res1 %>%
          name = paste0(name, " (", n, ")")) %>%
   ggplot(aes(value)) +
   geom_histogram(aes(fill = name), show.legend = F, color = "black") +
+  labs(y = "PLI") +
   facet_wrap(~name) +
   coord_flip()
 
-ggsave("data-raw/fig_pli-distributions.png", width = 12, height = 8)
+ggsave("man/figures/fig_pli-distributions.png", width = 12, height = 8)
 
 
 res2 %>%
-  write_rds("data-raw/tidy_ppdb-all-3plis.rds")
+  write_rds("inst/pkgdata/tidy_ppdb-3plis.rds")
 
+pli_ppdb3plis <- res2
+usethis::use_data(pli_ppdb3plis, overwrite = TRUE)

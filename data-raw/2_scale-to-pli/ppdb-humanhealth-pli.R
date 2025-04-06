@@ -86,5 +86,5 @@ ggsave("man/figures/fig_hh-scaling.png", width = 7, height = 6)
 # write it ----------------------------------------------------------------
 
 res_hh %>%
-  mutate(PLI_per_unit = ifelse(PLI_per_unit>1, 1, PLI_per_unit)) %>%
+  distinct() %>%
   write_rds("inst/pkgdata/tidy_ppdb-hh-plis.rds")
