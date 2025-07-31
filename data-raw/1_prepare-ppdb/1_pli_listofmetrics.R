@@ -4,6 +4,8 @@
 #--note we aren't including sci grow right now
 #--we need some 'human health' component, mammal toxicity for now
 #--March 31 2025 - Added mammals_acute_oral_ld50_mg_kg_2
+#--July 16 2025 - Using list of metrics from SUPPORT deliverable
+#--July 31 2025 - this might need updated...not changing for now, will come back as I identify more variables I need
 
 
 rm(list = ls())
@@ -26,11 +28,12 @@ a3 <-
 
   #--bioconcentration_factor_bcf_lkg
 
-#--three soil degradation values, not clear which PLI uses
-#--use the field days I guess, although things are sprayed in greenhouses
-
 
 # B. DT50 refs-----------------------------------------------------------------
+#--three soil degradation values, not clear which PLI uses
+#--use the field days I guess, although things are sprayed in greenhouses
+#--UPDATE: use the lab values
+
 
 b1 <- system.file("extdata",
                   "byhand_dt50-ref-values.xlsx",
