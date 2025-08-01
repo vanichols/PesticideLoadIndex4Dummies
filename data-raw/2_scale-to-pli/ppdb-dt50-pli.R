@@ -10,7 +10,7 @@ theme_set(theme_economist_white())
 # 1. reference values -----------------------------------------------------
 
 r1 <- system.file("extdata",
-                  "byhand_dt50-ref-values.xlsx",
+                  "PPDB_Aarhus_University_25-07-18.xlsx",
                   package = "PesticideLoadIndex4Dummies")
 
 r2 <- readxl::read_excel(r1, skip = 5)
