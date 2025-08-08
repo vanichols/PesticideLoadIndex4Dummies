@@ -1,126 +1,69 @@
-#--July 31 2025 - Using list of metrics from SUPPORT deliverable
-#--Aug 1 2025 - This is on pause bc I can't match the SUPPORT deliverable metrics to the PPDB columns. Emailed Vera.
+#--starts by reading in things we have defined reference values for
+#--no reference value means not included
+#--this will show which metrics are included (maybe they will change)
+#--note we aren't including sci grow right now
+#--we need some 'human health' component, mammal toxicity for now
+#--March 31 2025 - Added mammals_acute_oral_ld50_mg_kg_2
+#--July 16 2025 - Using list of metrics from SUPPORT deliverable
+#--July 31 2025 - this might need updated...not changing for now, will come back as I identify more variables I need
 
 
 rm(list = ls())
 
 library(tidyverse)
 
+# A. BCF ref values -------------------------------------------------------
 
-#--look at column names
-r1 <- system.file("extdata",
-                  "PPDB_Aarhus_University_25-07-18.xlsx",
+a1 <- system.file("extdata",
+                  "byhand_bcf-ref-values.xlsx",
                   package = "PesticideLoadIndex4Dummies")
 
-r2 <-
-  readxl::read_excel(r1) %>%
-  janitor::clean_names()
+a2 <- readxl::read_excel(a1, skip = 5)
 
-metrics <- colnames(r2)
+a3 <-
+  a2 %>%
+  fill(name) %>%
+  select(name) %>%
+  distinct()
 
-cheat_sheet <-
-  tibble(
-  metric = metrics[6:76]
-  ) %>%
-  mutate(coln = 1:n(),
-         coln2 = coln + 5) %>%
-  arrange(metric)
-
-# 1. fate metrics ---------------------------------------------------------
-
-#--dt50soil - 8
-cheat_sheet %>%
-  filter(grepl("dt50", metric))
-d1a <- metrics[8]
-
-#--dt50watear - 22
-cheat_sheet %>%
-  filter(grepl("water_phase", metric))
-d1b <- metrics[22]
-
-#--scigrow - 76
-cheat_sheet %>%
-  filter(grepl("sci", metric))
-d1c <- metrics[76]
-
-#--koc - 18
-cheat_sheet %>%
-  filter(grepl("koc", metric))
-d1d <- metrics[18]
-
-#--bcf - 24
-cheat_sheet %>%
-  filter(grepl("bcf", metric))
-d1e <- metrics[24]
+  #--bioconcentration_factor_bcf_lkg
 
 
-d1 <-
-  tibble(
-    cat = "fate",
-    metric = c(d1a, d1b, d1c, d1d, d1e)
-  ) %>%
-  mutate(subcat = case_when(
-    metric == d1a ~ "persistance",
-    metric == d1b ~ "persistance",
-    metric == d1c ~ "leachability",
-    metric == d1d ~ "mobility",
-    metric == d1e ~ "bio concentration",
-
-    TRUE ~ "xxx"
-  ))
-
-d1
-
-# 2. ecotox metrics ---------------------------------------------------------
-
-#----group 1
-
-#--lc50_fish - 55
-cheat_sheet %>%
-  filter(grepl("lc50", metric))
-d2a <- metrics[55]
-
-# lc50_aqu_invert (assumed acute)
-cheat_sheet %>%
-  filter(grepl("inv", metric))
-d2b <- metrics[61]
-
-# lc50_sedimentorg ######## no idea what this one is....
-# cheat_sheet %>%
-#   filter(grepl("lc50", metric))
-# d2c <- metrics[61]
-
-# lc50_algae
-cheat_sheet %>%
-  filter(grepl("alg", metric))
-d2b <- metrics[61]
-
-# ec50_lemna
+# B. DT50 refs-----------------------------------------------------------------
+#--three soil degradation values, not clear which PLI uses
+#--use the field days I guess, although things are sprayed in greenhouses
+#--UPDATE: use the lab values
 
 
-d1a <- metrics[8]
+b1 <- system.file("extdata",
+                  "byhand_dt50-ref-values.xlsx",
+                  package = "PesticideLoadIndex4Dummies")
 
-#--dt50watear - 22
-d1b <- metrics[22]
+b2 <- readxl::read_excel(b1, skip = 5)
 
-#--scigrow - 71
-d1c <- metrics[71]
-
-#--koc - 13
-d1d <- metrics[13]
-
-#--bcf - 19
-d1e <- metrics[19]
+b3 <-
+  b2 %>%
+  fill(name) %>%
+  select(name) %>%
+  distinct()
 
 
-d1 <-
-  tibble(
-    cat = "fate",
-    metric = c(d1a, d1b, d1c, d1d, d1e)
-  )
+# C. ecotox refs ----------------------------------------------------------
+
+c1 <- system.file("extdata",
+                  "byhand_ecotox-ref-values.xlsx",
+                  package = "PesticideLoadIndex4Dummies")
+
+c2 <- readxl::read_excel(c1, skip = 5)
+
+c3 <-
+  c2 %>%
+  fill(name) %>%
+  select(name) %>%
+  distinct()
 
 
-
+# D. mammalian tox ref ----------------------------------------------------
 
 d <-
   a3 %>%
