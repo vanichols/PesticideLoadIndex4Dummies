@@ -97,7 +97,8 @@ d1 <-
   )) %>%
   mutate(ag2 = "fate",
          ag3 = "fate",
-         ag4 = "fate")
+         ag4 = "fate") %>%
+  mutate(support_order = 1:n())
 
 d1
 
@@ -194,7 +195,8 @@ d2 <-
   )) %>%
   mutate(ag2 = "human health",
          ag3 = "human health",
-         ag4 = "human health")
+         ag4 = "human health") %>%
+  mutate(support_order = 1:n())
 
 d2
 
@@ -217,20 +219,29 @@ d3b <- metrics[119]
 cheat_sheet %>%
   filter(grepl("sed", metric)) %>%
   filter(grepl("acute", metric))
-d3c <- metrics[126]
+d3c <- metrics[125]
+
+tst <-
+  r2small %>%
+  select(contains("sed")) %>%
+  select(contains("acute"))
 
 #--group 2
 
 # lc50_algae
 cheat_sheet %>%
   filter(grepl("alg", metric))
-d3d <- metrics[140]
+d3d <- metrics[139]
 
 # ec50_lemna
 cheat_sheet %>%
   filter(grepl("free", metric)) %>%
   filter(grepl("aqu", metric))
-d3e <- metrics[133]
+tst <-
+  r2small %>%
+  select(contains("free")) %>%
+  select(contains("aqu"))
+d3e <- metrics[131]
 
 #--group 3
 
@@ -238,19 +249,30 @@ d3e <- metrics[133]
 cheat_sheet %>%
   filter(grepl("fish", metric)) %>%
   filter(grepl("chr", metric))
+
+tst <-
+  r2small %>%
+  select(contains("fish")) %>%
+  select(contains("chr"))
+
 d3f <- metrics[116]
 
 #--noec_daphnia
 cheat_sheet %>%
   filter(grepl("noec", metric)) %>%
   filter(grepl("inv", metric))
-d3g <- metrics[123]
+tst <-
+  r2small %>%
+  select(contains("noec")) %>%
+  select(contains("inv"))
+
+d3g <- metrics[122]
 
 #--noec_sedimentorg
 cheat_sheet %>%
   filter(grepl("sed", metric)) %>%
   filter(grepl("noec", metric))
-d3h <- metrics[129]
+d3h <- metrics[128]
 
 #--group 4
 
@@ -258,13 +280,13 @@ d3h <- metrics[129]
 cheat_sheet %>%
   filter(grepl("earth", metric)) %>%
   filter(grepl("acute", metric))
-d3i <- metrics[59]
+d3i <- metrics[58]
 
 #--noec_earthworm
 cheat_sheet %>%
   filter(grepl("earth", metric)) %>%
   filter(grepl("noec", metric))
-d3j <- metrics[62]
+d3j <- metrics[61]
 
 #--noec_other_soilorg ----check, 2 columns
 cheat_sheet %>%
@@ -283,13 +305,22 @@ d3k <- metrics[84]
 cheat_sheet %>%
   filter(grepl("bir", metric)) %>%
   filter(grepl("acute", metric))
+tst <-
+  r2small %>%
+  select(contains("bir")) %>%
+  select(contains("acu"))
+
 d3l <- metrics[52]
 
 #--noel_birds
 cheat_sheet %>%
   filter(grepl("bir", metric)) %>%
   filter(grepl("chr", metric))
-d3m <- metrics[56]
+tst <-
+  r2small %>%
+  select(contains("bir")) %>%
+  select(contains("chr"))
+d3m <- metrics[55]
 
 #--group 6
 
@@ -303,7 +334,7 @@ d3n <- metrics[26]
 cheat_sheet %>%
   filter(grepl("mam", metric)) %>%
   filter(grepl("chr", metric))
-d3o <- metrics[40]
+d3o <- metrics[39]
 
 #--group 7
 
@@ -311,37 +342,41 @@ d3o <- metrics[40]
 cheat_sheet %>%
   filter(grepl("honey", metric)) %>%
   filter(grepl("acute", metric))
-d3p <- metrics[65]
+tst <-
+  r2small %>%
+  select(contains("honey")) %>%
+  select(contains("acu"))
+d3p <- metrics[64]
 
 #--ld50_bee_ora
 cheat_sheet %>%
 filter(grepl("honey", metric)) %>%
   filter(grepl("oral", metric))
-d3q <- metrics[68]
+d3q <- metrics[67]
 
 #--ld50_bumble_cont
 cheat_sheet %>%
   filter(grepl("bumb", metric)) %>%
   filter(grepl("cont", metric))
-d3r <- metrics[71]
+d3r <- metrics[70]
 
 #--ld50_bumble_ora
 cheat_sheet %>%
   filter(grepl("bumb", metric)) %>%
   filter(grepl("ora", metric))
-d3s <- metrics[75]
+d3s <- metrics[74]
 
 #--ld50_mason_cont
 cheat_sheet %>%
   filter(grepl("mas", metric)) %>%
   filter(grepl("cont", metric))
-d3t <- metrics[79]
+d3t <- metrics[78]
 
 #--ld50_mason_ora
 cheat_sheet %>%
   filter(grepl("mas", metric)) %>%
   filter(grepl("ora", metric))
-d3u <- metrics[82]
+d3u <- metrics[81]
 
 #--group 8
 
@@ -349,12 +384,20 @@ d3u <- metrics[82]
 cheat_sheet %>%
   filter(grepl("pred", metric)) %>%
   filter(grepl("mite", metric))
+tst <-
+  r2small %>%
+  select(contains("pred")) %>%
+  select(contains("mite"))
 d3v <- metrics[109]
 
 #--lr50_rhopa
 cheat_sheet %>%
   filter(grepl("para", metric)) %>%
   filter(grepl("wasp", metric))
+tst <-
+  r2small %>%
+  select(contains("para")) %>%
+  select(contains("wasp"))
 d3w <- metrics[105]
 
 #--lr50_p cupreus
@@ -379,13 +422,17 @@ d3z <- metrics[93]
 cheat_sheet %>%
   filter(grepl("targ", metric)) %>%
   filter(grepl("vig", metric))
-d3aa <- metrics[88]
+tst <-
+  r2small %>%
+  select(contains("targ")) %>%
+  select(contains("vig"))
+d3aa <- metrics[87]
 
 #--er50 ntp2
 cheat_sheet %>%
   filter(grepl("targ", metric)) %>%
   filter(grepl("seed", metric))
-d3ab <- metrics[91]
+d3ab <- metrics[90]
 
 #----------combine
 
@@ -452,11 +499,23 @@ d3ag <-
   d3af %>%
   mutate(ag4 = "ecotoxicity")
 
-d3 <- d3ag
+d3 <-
+  d3ag %>%
+  mutate(support_order = 1:n())
+
+d3
+
+
+# 4. combine all ----------------------------------------------------------
+
+d4 <-
+  d1 %>%
+  bind_rows(d2) %>%
+  bind_rows(d3)
 
 # write data --------------------------------------------------------------
 
-pli_listofmetrics <- d3
+pli_listofmetrics <- d4
 
 usethis::use_data(pli_listofmetrics, overwrite = TRUE)
 

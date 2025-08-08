@@ -1,5 +1,6 @@
 # PPDB internal data cleanup
 # created 26 march 2025
+# updated 8 aug 2025
 
 library(tidyverse)
 
@@ -11,7 +12,7 @@ rm(list = ls())
 #--do not worry about the warnings
 
 a1 <- system.file("extdata",
-                  "PPDB_Aarhus_University_24-07-15.xlsx",
+                  "PPDB_Aarhus_University_25-08-08.xlsx",
                   package = "PesticideLoadIndex4Dummies")
 
 a2 <- readxl::read_excel(a1)
@@ -22,7 +23,27 @@ a3 <-
 
 a <- a3
 
-#--we got a lot we didn't specifically ask for, _qb is an indicator of quality
+
+# B. metrics we requested -------------------------------------------------
+
+#--we got a lot we didn't specifically ask for, keep only the metrics we will use
+#--this is created in 1_pli_listofmetrics code
+
+b <-
+  read_csv("inst/pkgdata/pli_listofmetrics.csv") %>%
+  select(metric) %>%
+  arrange(metric) %>%
+  pull(metric)
+
+
+
+# C. par it down ----------------------------------------------------------
+
+#--something wrong with sediment dwelling org
+
+a %>%
+  select(1:5,
+         all_of(b))
 
 # B. clean it up: 154,602 entries----------------------------------------------------------
 
@@ -30,6 +51,7 @@ a <- a3
 
 b <-
   a %>%
+  dplyr::select(1:5, )
   dplyr::mutate_all(as.character) %>%
   tidyr::pivot_longer(6:ncol(.)) %>%
   dplyr::mutate_if(is.character, str_to_lower)
