@@ -7,179 +7,106 @@ library(tidyverse)
 Sys.setenv(LANG = "en")
 rm(list = ls())
 
-# A. raw data ----------------------------------------------------------------
+# 1. raw data ----------------------------------------------------------------
 #--note they send me an updated version every 3 months
 #--do not worry about the warnings
 
-a1 <- system.file("extdata",
+d1a <- system.file("extdata",
                   "PPDB_Aarhus_University_25-08-08.xlsx",
                   package = "PesticideLoadIndex4Dummies")
 
-a2 <- readxl::read_excel(a1)
+d1b <- readxl::read_excel(d1a)
 
-a3 <-
-  a2 %>%
+d1c <-
+  d1b %>%
   janitor::clean_names()
 
-a <- a3
+d1 <- d1c
 
 
-# B. metrics we requested -------------------------------------------------
-
-#--we got a lot we didn't specifically ask for, keep only the metrics we will use
+# 2. metrics we requested -------------------------------------------------
 #--this is created in 1_pli_listofmetrics code
 
-b <-
-  read_csv("inst/pkgdata/pli_listofmetrics.csv") %>%
+d2a <-
+  read_csv("inst/pkgdata/pli_listofmetrics.csv")
+
+d2b <-
+  d2a %>%
   select(metric) %>%
   arrange(metric) %>%
   pull(metric)
 
-
-
-# C. par it down ----------------------------------------------------------
-
-#--something wrong with sediment dwelling org
-
-a %>%
+d2c <-
+  d1 %>%
   select(1:5,
-         all_of(b))
+         all_of(d2b))
 
-# B. clean it up: 154,602 entries----------------------------------------------------------
-
-#--qb
-
-b <-
-  a %>%
-  dplyr::select(1:5, )
-  dplyr::mutate_all(as.character) %>%
-  tidyr::pivot_longer(6:ncol(.)) %>%
-  dplyr::mutate_if(is.character, str_to_lower)
+d2 <- d2c
 
 
-# C. get rid of dupes: 154,592 ---------------------------------
-#--weird
+# 3. make it character and long -------------------------------------------
 
-c <-
-  b %>%
-  dplyr::distinct()
-
-
-# D. eliminate the _qb names, 103,068 ----------------------------------------------
-
-d <-
-  c %>%
-  dplyr::filter(!grepl("_qb", name))
+d3 <-
+  d2 %>%
+  select(id, substance, pesticide_type, 6:ncol(.)) %>%
+  mutate_all(as.character) %>%
+  pivot_longer(4:ncol(.))
 
 
-# E. the _2 and = data, 26,371 ----------------------------------------------------
+# 4. numeric --------------------------------------------------------------
 
-#--these seem safe to remove
-tmp.e <-
-  d %>%
-  dplyr::filter(value == "=")
-
-tmp.e <-
-  d %>%
-  dplyr::filter(grepl("_2$", name)) %>%
-  dplyr::select(name)
-
-e <-
-  d %>%
-  dplyr::filter(value != "=") %>%
-  dplyr::filter(!grepl("_2$", name))
+suppressWarnings(
+  d4 <-
+    d3 %>%
+    mutate(value_num = as.numeric(value))
+)
 
 
-# F. keep only the 'pli_listofmetrics', 12,821 ---------------------------------------
+# 5. fix bioconcentration factor -----------------------------------
 
-internal_listofmetrics <- readr::read_csv(system.file("pkgdata",
-                                     "pli_listofmetrics.csv",
-                                     package = "PesticideLoadIndex4Dummies"))
-
-#--does not include scigrow
-
-f <-
-  e %>%
-  filter(name %in% internal_listofmetrics$name)
-
-
-# G. make value numeric ---------------------------------------------------
-
-g1 <-
-  f %>%
-  dplyr::mutate(value2 = as.numeric(value))
-
-#--look at the NAs in value2
-#--it is only the bioconcentration_factor
-tmp.g1 <-
-  g1 %>%
-  filter(is.na(value2))
-
-tmp.g1 %>%
-  pull(name) %>%
-  unique()
-
-g2 <-
-  g1 %>%
-  dplyr::mutate(value2 = dplyr::case_when(
+d5 <-
+  d4 %>%
+  mutate(value_num = dplyr::case_when(
     (name == "bioconcentration_factor_bcf_l_kg" & value == "low risk") ~ 0,
     (name == "bioconcentration_factor_bcf_l_kg" & value == "<1.0") ~ 1,
     (name == "bioconcentration_factor_bcf_l_kg" & value == "<4") ~ 4,
     (name == "bioconcentration_factor_bcf_l_kg" & value == "high risk") ~ 5674,
-    TRUE ~ value2)
+    TRUE ~ value_num)
     )
 
-tmp.g2 <-
-  g2 %>%
-  filter(is.na(value2))
 
+# 6. add pli category and order -----------------------------------------------------
 
-g <- g2
+d6a <-
+  d2a %>%
+  select(pli_cat = cat,
+         name = metric) %>%
+  left_join(d5, relationship = "many-to-many")
 
-# H. arrange and id within name-----------------------------------------------------------
+d6 <-
+  d6a %>%
+  select(id, pli_cat, name, substance, pesticide_type, value, value_num) %>%
+  group_by(name) %>%
+  dplyr::arrange(value_num, .by_group = TRUE)
 
-h <-
-  g %>%
-  dplyr::group_by(name) %>%
-  dplyr::arrange(value2, .by_group = TRUE)
-
-
-tmp.h <-
-  h %>%
+tmp.d6 <-
+  d6 %>%
   dplyr::group_by(name) %>%
   dplyr::summarise(
-    min = min(value2),
-    mn = mean(value2),
-    med = median(value2),
-    max = max(value2)
+    min = min(value_num, na.rm = T),
+    mn = mean(value_num, na.rm = T),
+    med = median(value_num, na.rm = T),
+    max = max(value_num, na.rm = T)
   ) %>%
   dplyr::distinct()
 
-#--great, everyone has a value
-tmp.h
-
-
-# Z. clean up --------------------------------------------
-
-#--this column is a bitch, no filtering by pesticide_type
-h %>% pull(pesticide_type) %>% unique()
-
-h %>%
-  group_by(pesticide_type) %>%
-  summarise(n = n()) %>%
-  arrange(-n)
-
-z <-
-  h %>%
-  left_join(internal_listofmetrics, relationship = "many-to-many") %>%
-  dplyr::select(id, pli_cat, name, name_nice,
-                substance, pesticide_type,
-                value.num = value2)
+#--great, everyone has at least one value
+tmp.d6
 
 
 # write internal data -----------------------------------------------------
 
-internal_tidyppdb <- z
+internal_tidyppdb <- d6
 
 internal_tidyppdb %>%
   write_rds("inst/pkgdata/internal_ppdb.rds")
