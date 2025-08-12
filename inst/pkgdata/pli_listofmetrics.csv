@@ -9,7 +9,7 @@ humhea,acute_reference_dose_a_rf_d_mg_kg_bw_d,operators,human health,human healt
 humhea,acceptable_daily_intake_adi_mg_kg_bw_d,consumers,human health,human health,human health,3
 humhea,drinking_water_mac_ug_l,consumers,human health,human health,human health,4
 humhea,mammals_acute_oral_ld50_mg_kg,mammals,human health,human health,human health,5
-humhea,mammals_short_term_dietary_noel_mg_kg,mammals,human health,human health,human health,6
+humhea,mammals_dermal_ld50_mg_kg,mammals,human health,human health,human health,6
 ecotox,temperate_freshwater_fish_acute_96hr_lc50_mg_l,temperate_freshwater_fish_acute_96hr_lc50_mg_l,aquatic organisms acute,aquatic organisms,ecotoxicity,1
 ecotox,temperate_freshwater_aquatic_invertebrates_acute_ec50_mg_l,temperate_freshwater_aquatic_invertebrates_acute_ec50_mg_l,aquatic organisms acute,aquatic organisms,ecotoxicity,2
 ecotox,sediment_dwelling_organisms_acute_96hr_lc50_mg_l,sediment_dwelling_organisms_acute_96hr_lc50_mg_l,aquatic organisms acute,aquatic organisms,ecotoxicity,3

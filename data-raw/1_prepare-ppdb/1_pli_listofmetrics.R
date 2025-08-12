@@ -166,14 +166,14 @@ r2small %>%
   mutate(new = as.numeric(h))
 
 
-#--noeal_mam
+#--noeal_mam - in table 3 they list noeal_mam, but in table 8 they list dermal exposure. use dermal
 cheat_sheet %>%
-  filter(grepl("diet", metric))
+  filter(grepl("dermal", metric))
 
 r2 %>%
-  select(contains("diet"))
+  select(contains("dermal"))
 
-d2f <- metrics[35]
+d2f <- metrics[29]
 
 r2small %>%
   select(all_of(d2f))
