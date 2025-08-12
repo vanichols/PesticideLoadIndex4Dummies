@@ -62,9 +62,10 @@ suppressWarnings(
 )
 
 
-# 5. fix bioconcentration factor -----------------------------------
+# 5. fix things -----------------------------------
 
-d5 <-
+#--bioconcentration factor
+d5a <-
   d4 %>%
   mutate(value_num = dplyr::case_when(
     (name == "bioconcentration_factor_bcf_l_kg" & value == "low risk") ~ 0,
@@ -73,6 +74,10 @@ d5 <-
     (name == "bioconcentration_factor_bcf_l_kg" & value == "high risk") ~ 5674,
     TRUE ~ value_num)
     )
+
+#--arfd? Not a problem, "none allocated" should be NA, and is
+
+d5 <- d5a
 
 
 # 6. add pli category and order -----------------------------------------------------
@@ -102,6 +107,15 @@ tmp.d6 <-
 
 #--great, everyone has at least one value
 tmp.d6
+
+
+# 7. get rid of rodenticide and mammal killers ----------------------------
+
+d7 <-
+  d6 %>%
+  mutate(pesticide_type = str_to_lower(pesticide_type)) %>%
+  filter(!grepl("rodent", pesticide_type)) %>%
+  filter(!grepl("mammal", pesticide_type))
 
 
 # write internal data -----------------------------------------------------
