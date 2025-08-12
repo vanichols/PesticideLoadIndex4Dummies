@@ -76,11 +76,17 @@ d3 <-
 
 # 4. look at it ----------------------------------------------------------------
 
+#--ummmm something looks funny, the numbers are too big, but that's a database problem...
 d3 %>%
   ggplot(aes(value_num, sc_value)) +
   geom_line() +
   facet_wrap(~name, scales = "free")
 
+d4 <-
+  d3 %>%
+  mutate(pli = sc_value) %>%
+  select(-value, -sc_value)
 
-d3 %>%
+
+d4 %>%
   write_rds("inst/pkgdata/tidy_envfat.rds")
